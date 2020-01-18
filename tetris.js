@@ -183,9 +183,9 @@ const figure = {
         context.restore();
     },
 
-    isColliding(collider) {
+    isColliding(shape, collider) {
         let result = null;
-        this.shape.forEachBlock(({ x, y }, block) => {
+        shape.forEachBlock(({ x, y }, block) => {
             if (block && collider(this.x + x, this.y + y)) {
                 result = true;
                 return;
@@ -196,26 +196,44 @@ const figure = {
     },
 
     goLeft(collider) {
-        this.x -= 1;
-        if (this.isColliding(collider)) {
-            this.x += 1;
-        }
-    },
+        const leftCollider = (x, y) => collider(x - 1, y);
 
-    goRight(collider) {
-        this.x += 1;
-        if (this.isColliding(collider)) {
+        if (!this.isColliding(this.shape, leftCollider)) {
             this.x -= 1;
         }
     },
 
-    rotate() {
-        this.shape = this.shape.rotate();
+    goRight(collider) {
+        const rightCollider = (x, y) => collider(x + 1, y);
+
+        if (!this.isColliding(this.shape, rightCollider)) {
+            this.x += 1;
+        }
+    },
+
+    rotate(collider) {
+        const rotatedShape = this.shape.rotate();
+        const leftCollider = (x, y) => collider(x - 1, y);
+        const rightCollider = (x, y) => collider(x + 1, y);
+        const upCollider = (x, y) => collider(x, y - 1);
+
+        if (!this.isColliding(rotatedShape, collider)) {
+            this.shape = rotatedShape;
+        } else if (!this.isColliding(rotatedShape, leftCollider)) {
+            this.x -= 1;
+            this.shape = rotatedShape;
+        } else if (!this.isColliding(rotatedShape, rightCollider)) {
+            this.x += 1;
+            this.shape = rotatedShape;
+        } else if (!this.isColliding(rotatedShape, upCollider)) {
+            this.y -= 1;
+            this.shape = rotatedShape;
+        }
     },
 
     fall(collider) {
         this.y += 1;
-        if (this.isColliding(collider)) {
+        if (this.isColliding(this.shape, collider)) {
             this.y -= 1;
             return 'hitFloor';
         }
