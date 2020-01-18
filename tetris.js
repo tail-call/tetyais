@@ -253,7 +253,9 @@ const game = {
     tickDuration: 500,
     score: 0,
     collider: null,
-    picture: null,
+    picture: makeImage('pony.png'),
+    gameOverPicture: makeImage('yeltsin.jpg'),
+    state: 'Game', // Begin, Game, End
 
     onTick() {
         const fallResult = figure.fall(this.collider);
@@ -274,6 +276,10 @@ const game = {
             }
             this.score += addedScore;
             figure.reset();
+
+            if (figure.isColliding(figure.shape, this.collider)) {
+                this.state = 'End';
+            }
         }
     },
 
@@ -295,7 +301,11 @@ const game = {
         context.font = '12px serif';
         context.fillText('A soviet mind game ☭', 208, 65);
         context.fillText('Score: ' + this.score, 208, 77);
-        context.drawImage(this.picture, 208, 90, 200, 200);
+        if (this.state === 'End') {
+            context.drawImage(this.gameOverPicture, 208, 90, 200, 200);
+        } else {
+            context.drawImage(this.picture, 208, 90, 200, 200);
+        }
         this.level.draw();
         context.fillStyle = 'rgba(0, 0, 0, 50%)';
         figure.draw();
@@ -305,7 +315,10 @@ const game = {
         context.restore();
     },
 
-    advance() {
+    advanceEnd() {
+    },
+
+    advanceGame() {
         const now = performance.now();
         const dt = (now - this.lastTimestamp);
 
@@ -318,7 +331,14 @@ const game = {
         }
     },
 
-    processInput(name) {
+    advance() {
+        this['advance' + this.state]();
+    },
+
+    processInputEnd(name) {
+    },
+
+    processInputGame(name) {
         switch (name) {
         case ' _down':
             figure.rotate(this.collider);
@@ -339,9 +359,12 @@ const game = {
         return true;
     },
 
+    processInput(name) {
+        this['processInput' + this.state](name);
+    },
+
     init() {
         this.collider = this.hasBlock.bind(this);
-        this.picture = makeImage('pony.png');
 
         window.addEventListener('keydown', event => {
             if (!this.processInput(`${event.key}_down`)) event.preventDefault();
