@@ -9,112 +9,151 @@ const TILE_HEIGHT = 20;
 const LEVEL_WIDTH = 8;
 const LEVEL_HEIGHT = 18;
 
-const Shape = {
-    defaultShapes: {
-        T: [
-            0, 0, 0, 0,
-            1, 2, 1, 0,
-            0, 1, 0, 0,
-            0, 0, 0, 0,
-        ],
-        S: [
-            0, 0, 0, 0,
-            0, 2, 1, 0,
-            1, 1, 0, 0,
-            0, 0, 0, 0,
-        ],
-        Z: [
-            0, 0, 0, 0,
-            1, 2, 0, 0,
-            0, 1, 1, 0,
-            0, 0, 0, 0,
-        ],
-        O: [
-            0, 0, 0, 0,
-            0, 2, 1, 0,
-            0, 1, 1, 0,
-            0, 0, 0, 0,
-        ],
-        L: [
-            0, 1, 0, 0,
-            0, 2, 0, 0,
-            0, 1, 1, 0,
-            0, 0, 0, 0,
-        ],
-        R: [
-            0, 1, 0, 0,
-            0, 2, 0, 0,
-            1, 1, 0, 0,
-            0, 0, 0, 0,
-        ],
-    },
+function inRange(x, bottom, top) {
+    return (x >= bottom) && (x < top);
+}
 
-    pick() {
-        const shapes = Object.values(this.defaultShapes);
+class Shape {
+    constructor(props = {}) {
+        Object.assign(this, {
+            canRotate: true,
+            blocks: Array(SHAPE_DIMENSION * SHAPE_DIMENSION).fill(2),
+        }, props);
+    }
+
+    static defaultShapes() {
+        return {
+            T: new Shape({
+                blocks: [0, 0, 0, 0,
+                         1, 2, 1, 0,
+                         0, 1, 0, 0,
+                         0, 0, 0, 0],
+            }),
+            S: new Shape({
+                blocks: [0, 0, 0, 0,
+                         0, 2, 1, 0,
+                         1, 1, 0, 0,
+                         0, 0, 0, 0],
+            }),
+            Z: new Shape({
+                blocks: [0, 0, 0, 0,
+                         1, 2, 0, 0,
+                         0, 1, 1, 0,
+                         0, 0, 0, 0],
+            }),
+            O: new Shape({
+                blocks: [0, 0, 0, 0,
+                         0, 2, 1, 0,
+                         0, 1, 1, 0,
+                         0, 0, 0, 0],
+                canRotate: false,
+            }),
+            L: new Shape({
+                blocks: [0, 1, 0, 0,
+                         0, 2, 0, 0,
+                         0, 1, 1, 0,
+                         0, 0, 0, 0],
+            }),
+            R: new Shape({
+                blocks: [0, 1, 0, 0,
+                         0, 2, 0, 0,
+                         1, 1, 0, 0,
+                         0, 0, 0, 0],
+            }),
+        };
+    }
+
+    static pick() {
+        const shapes = Object.values(Shape.defaultShapes());
         const index = Math.floor(Math.random() * shapes.length);
         return shapes[index];
-    },
+    }
 
-    indexToCoords(i) {
+    static indexToCoords(i) {
         const x = i % SHAPE_DIMENSION;
         const y = (i - x) / SHAPE_DIMENSION;
         return { x, y };
-    },
+    }
 
-    coordsToIndex(x, y) {
+    static coordsToIndex(x, y) {
         return y * SHAPE_DIMENSION + x;
-    },
+    }
 
-    hotSpot(shape) {
-        const i = shape.findIndex(x => x > 1);
+    hotSpot() {
+        const i = this.blocks.findIndex(x => x > 1);
         if (i < 0) return { x: 1, y: 1 };
 
-        return this.indexToCoords(i);
-    },
+        return Shape.indexToCoords(i);
+    }
 
-    rotate(shape) {
-        return shape.map((_, i) => {
-            const { x, y } = this.indexToCoords(i);
+    rotate() {
+        if (!this.canRotate) return this;
 
-            return shape[this.coordsToIndex(y, SHAPE_DIMENSION - x - 1)];
+        return new Shape({
+            blocks: this.blocks.map((_, i) => {
+                const { x, y } = Shape.indexToCoords(i);
+                return this.blocks[Shape.coordsToIndex(y, SHAPE_DIMENSION - x - 1)];
+            }),
         });
-    },
+    }
 
-    forEachBlock(shape, cb) {
-        shape.forEach((cell, i) => {
-            const coords = this.indexToCoords(i);
-            const hotSpot = this.hotSpot(shape);
-            if (!cell) return;
+    forEachBlock(cb) {
+        this.blocks.forEach((block, i) => {
+            const coords = Shape.indexToCoords(i);
+            const hotSpot = this.hotSpot();
+            if (!block) return;
+
             cb({
                 x: coords.x - hotSpot.x,
                 y: coords.y - hotSpot.y,
-            }, cell);
+            }, block);
         });
-    },
+    }
 };
 
-const level = {
-    width: LEVEL_WIDTH,
-    height: LEVEL_HEIGHT,
-    blocks: {},
+class Level {
+    constructor({ width, height }) {
+        this.width = width;
+        this.height = height;
+        this.blocks = Array(height).fill(null).map(_ => {
+            return Array(width).fill(0);
+        });
+    }
 
     getBlockAt(x, y) {
-        return this.blocks[`${x}:${y}`];
-    },
+        if (inRange(x, 0, this.width) && inRange(y, 0, this.height)) {
+            return this.blocks[y][x];
+        }
+        return 0;
+    }
 
     setBlockAt(x, y, block) {
-        this.blocks[`${x}:${y}`] = block;
-    },
+        if (inRange(x, 0, this.width) && inRange(y, 0, this.height)) {
+            this.blocks[y][x] = block;
+        }
+    }
 
     draw() {
-        for (y = 0; y < this.height; y++) {
-            for (x = 0; x < this.width; x++) {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                // Grid
                 context.strokeRect(x * TILE_WIDTH, y * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT);
+
                 if (this.getBlockAt(x, y)) {
+                    // Block
                     context.fillRect(x * TILE_WIDTH, y * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT);
                 }
             }
         }
+    }
+
+    isLineFilled(number) {
+        return this.blocks[number].every(x => x !== 0);
+    }
+
+    eraseLine(number) {
+        this.blocks.splice(number, 1);
+        this.blocks.unshift(Array(this.width).fill(0));
     }
 }
 
@@ -122,7 +161,7 @@ const level = {
 const figure = {
     x: SHAPE_DIMENSION,
     y: -1,
-    shape: Shape.defaultShapes.T,
+    shape: Shape.pick(),
 
     reset() {
         this.x = SHAPE_DIMENSION;
@@ -133,11 +172,11 @@ const figure = {
     draw() {
         context.save();
         context.translate(this.x * TILE_WIDTH, this.y * TILE_HEIGHT);
-        for (let i = 0; i < this.shape.length; i++) {
+        for (let i = 0; i < this.shape.blocks.length; i++) {
             const { x, y } = Shape.indexToCoords(i);
-            const { x: hx, y: hy } = Shape.hotSpot(this.shape);
+            const { x: hx, y: hy } = this.shape.hotSpot();
 
-            if (!this.shape[i]) continue;
+            if (!this.shape.blocks[i]) continue;
 
             context.fillRect((x - hx) * TILE_WIDTH, (y - hy) * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT);
         }
@@ -146,7 +185,7 @@ const figure = {
 
     isColliding(collider) {
         let result = null;
-        Shape.forEachBlock(this.shape, ({ x, y }, block) => {
+        this.shape.forEachBlock(({ x, y }, block) => {
             if (block && collider(this.x + x, this.y + y)) {
                 result = true;
                 return;
@@ -171,7 +210,7 @@ const figure = {
     },
 
     rotate() {
-        this.shape = Shape.rotate(this.shape);
+        this.shape = this.shape.rotate();
     },
 
     fall(collider) {
@@ -184,33 +223,49 @@ const figure = {
 };
 
 const game = {
+    level: new Level({ width: LEVEL_WIDTH, height: LEVEL_HEIGHT }),
     lastTimestamp: 0,
     tickTimer: 0,
-    tickDuration: 150,
-    levelHeight: LEVEL_HEIGHT,
-    levelWidth: LEVEL_WIDTH,
+    tickDuration: 500,
     collider: null,
 
     onTick() {
         const fallResult = figure.fall(this.collider);
+
         if (fallResult === 'hitFloor') {
-            Shape.forEachBlock(figure.shape, ({ x: blockX, y: blockY }, block) => {
+            figure.shape.forEachBlock(({ x: blockX, y: blockY }, block) => {
                 const x = blockX + figure.x;
                 const y = blockY + figure.y;
-                level.setBlockAt(x, y, block || level.getBlockAt(x, y));
+                this.level.setBlockAt(x, y, block || this.level.getBlockAt(x, y));
             });
+
+            for (let i = 0; i < this.level.height; i++) {
+                if (this.level.isLineFilled(i)) {
+                    this.level.eraseLine(i);
+                }
+            }
             figure.reset();
         }
     },
 
     hasBlock(x, y) {
-        return y >= this.levelHeight || level.getBlockAt(x, y);
+        return y >= this.level.height || this.level.getBlockAt(x, y);
     },
 
     draw() {
         context.save();
+        context.transform(2, 0, -.2, 2, 80, 0);
         context.translate(10 + 0.5, 10 + 0.5);
-        level.draw();
+
+        context.font = '50px serif';
+        context.fillText('ТЕТЯIS', 200, 50);
+        context.font = '12px serif';
+        context.fillText('A soviet mind game ☭', 208, 65);
+        this.level.draw();
+        context.fillStyle = 'rgba(0, 0, 0, 50%)';
+        figure.draw();
+        context.translate(-6, -6);
+        context.fillStyle = 'black';
         figure.draw();
         context.restore();
     },
@@ -240,10 +295,10 @@ const game = {
             figure.goRight(this.collider);
             return;
         case 'ArrowDown_down':
-            this.startAccelerate();
+            this.tickDuration = 100;
             return;
         case 'ArrowDown_up':
-            this.stopAccelerate();
+            this.tickDuration = 500;
             return;
         }
         return true;
