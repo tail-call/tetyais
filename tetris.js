@@ -66,6 +66,12 @@ class Shape {
                          1, 1, 0, 0,
                          0, 0, 0, 0],
             }),
+            I: new Shape({
+                blocks: [0, 1, 0, 0,
+                         0, 2, 0, 0,
+                         0, 1, 0, 0,
+                         0, 1, 0, 0],
+            }),
         };
     }
 
@@ -253,6 +259,7 @@ const game = {
     tickDuration: 500,
     score: 0,
     collider: null,
+    speedyMode: false,
     picture: makeImage('pony.png'),
     gameOverPicture: makeImage('yeltsin.jpg'),
     state: 'Game', // Begin, Game, End
@@ -336,6 +343,21 @@ const game = {
     },
 
     processInputEnd(name) {
+        return true;
+    },
+
+    speedyModeOn() {
+        if (this.speedyMode) return;
+        this.speedyMode = true;
+        this.tickTimer /= 10;
+        this.tickDuration /= 10;
+    },
+
+    speedyModeOff() {
+        if (!this.speedyMode) return;
+        this.speedyMode = false;
+        this.tickTimer *= 10;
+        this.tickDuration *= 10;
     },
 
     processInputGame(name) {
@@ -350,17 +372,17 @@ const game = {
             figure.goRight(this.collider);
             return;
         case 'ArrowDown_down':
-            this.tickDuration = 100;
+            this.speedyModeOn();
             return;
         case 'ArrowDown_up':
-            this.tickDuration = 500;
+            this.speedyModeOff();
             return;
         }
         return true;
     },
 
     processInput(name) {
-        this['processInput' + this.state](name);
+        return this['processInput' + this.state](name);
     },
 
     init() {
