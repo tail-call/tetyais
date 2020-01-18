@@ -13,6 +13,12 @@ function inRange(x, bottom, top) {
     return (x >= bottom) && (x < top);
 }
 
+function makeImage(url) {
+    const image = new Image();
+    image.src = url;
+    return image;
+}
+
 class Shape {
     constructor(props = {}) {
         Object.assign(this, {
@@ -245,7 +251,9 @@ const game = {
     lastTimestamp: 0,
     tickTimer: 0,
     tickDuration: 500,
+    score: 0,
     collider: null,
+    picture: null,
 
     onTick() {
         const fallResult = figure.fall(this.collider);
@@ -257,11 +265,14 @@ const game = {
                 this.level.setBlockAt(x, y, block || this.level.getBlockAt(x, y));
             });
 
+            let addedScore = 0;
             for (let i = 0; i < this.level.height; i++) {
                 if (this.level.isLineFilled(i)) {
                     this.level.eraseLine(i);
+                    addedScore = addedScore ? (addedScore * 1.5) : 1000;
                 }
             }
+            this.score += addedScore;
             figure.reset();
         }
     },
@@ -283,6 +294,8 @@ const game = {
         context.fillText('ТЕТЯIS', 200, 50);
         context.font = '12px serif';
         context.fillText('A soviet mind game ☭', 208, 65);
+        context.fillText('Score: ' + this.score, 208, 77);
+        context.drawImage(this.picture, 208, 90, 200, 200);
         this.level.draw();
         context.fillStyle = 'rgba(0, 0, 0, 50%)';
         figure.draw();
@@ -328,6 +341,7 @@ const game = {
 
     init() {
         this.collider = this.hasBlock.bind(this);
+        this.picture = makeImage('pony.png');
 
         window.addEventListener('keydown', event => {
             if (!this.processInput(`${event.key}_down`)) event.preventDefault();
