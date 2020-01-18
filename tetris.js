@@ -249,7 +249,11 @@ const game = {
     },
 
     hasBlock(x, y) {
-        return y >= this.level.height || this.level.getBlockAt(x, y);
+        return (y >= this.level.height
+                || x < 0
+                || x >= this.level.width
+                || this.level.getBlockAt(x, y)
+        );
     },
 
     draw() {
