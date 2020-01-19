@@ -263,6 +263,7 @@ const game = {
     picture: makeImage('pony.png'),
     gameOverPicture: makeImage('yeltsin.jpg'),
     state: 'Game', // Begin, Game, End
+    scale: 1,
 
     onTick() {
         const fallResult = figure.fall(this.collider);
@@ -300,7 +301,7 @@ const game = {
 
     draw() {
         context.save();
-        context.transform(2, 0, -.2, 2, 80, 0);
+        context.transform(this.scale, 0, 0, this.scale, 80, 0);
         context.translate(10 + 0.5, 10 + 0.5);
 
         context.font = '50px serif';
@@ -385,8 +386,19 @@ const game = {
         return this['processInput' + this.state](name);
     },
 
+    rescale(width, height) {
+        this.scale = width / 800;
+    },
+
+    fitCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        this.rescale(canvas.width, canvas.height);
+    },
+
     init() {
         this.collider = this.hasBlock.bind(this);
+        this.fitCanvas();
 
         window.addEventListener('keydown', event => {
             if (!this.processInput(`${event.key}_down`)) event.preventDefault();
@@ -394,6 +406,10 @@ const game = {
 
         window.addEventListener('keyup', event => {
             if (!this.processInput(`${event.key}_up`)) event.preventDefault();
+        });
+
+        window.addEventListener('resize', event => {
+            this.fitCanvas();
         });
     },
 
